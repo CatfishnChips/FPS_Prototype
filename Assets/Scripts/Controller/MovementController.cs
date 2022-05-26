@@ -11,9 +11,11 @@ public class MovementController : MonoBehaviour
     [SerializeField] private float _acceleration;
     [SerializeField] private AnimationCurve _accelarationCurve;
     [SerializeField] private float _stopDeceleration;
+    [SerializeField] private float _slidingDeceleration;
     [SerializeField] private float _basicMovementSpeed;
     [SerializeField] private float _forwardVelocityHardCap;
     [SerializeField] private float _forwardVelocitySoftCap;
+    [SerializeField] private float _jumpHeight;
     [Space]
     [Header("Camera")]
     [SerializeField] private float _cameraAngleStandingRotation;
@@ -31,6 +33,7 @@ public class MovementController : MonoBehaviour
     [SerializeField] private bool _isGrounded;
     [SerializeField] private MovementStates _movementState;
     [SerializeField] private PlayerStates _playerState;
+    [SerializeField] private float _forwardVelocity;
 
     #endregion  
 
@@ -41,7 +44,6 @@ public class MovementController : MonoBehaviour
     private Vector3 _moveDirection;
     private bool _wasMovingLastFrame;
     private bool _isCameraLock;
-    private float _forwardVelocity;
     private Vector3 _cameraForwardLastFrame;
     private Vector3 _cameraRight {
         get {
@@ -75,37 +77,38 @@ public class MovementController : MonoBehaviour
 
     }
 
-    private float _inputDirectionZ() {
-        if (_velocity.z >= _basicMovementSpeed) {
-            return HandleAdvancedMovement();         
-        }
-        else 
-        return _inputDirection.z * _basicMovementSpeed;
-    }
-
     private void HandleBasicMovement() {
+        if (_playerState == PlayerStates.Sliding) return;
         _velocity.x = _inputDirection.x * _basicMovementSpeed;
-        _velocity.z = _inputDirectionZ();
-        ForwardVelocityClamp();
+        _velocity.z = _inputDirection.z * _basicMovementSpeed;
     }
 
-    private float HandleAdvancedMovement() {
-        //return _velocity.z + (Acceleration() * _inputDirection.z * Time.deltaTime); 
-        return _velocity.z + (AccelerationCurve() * _inputDirection.z * Time.deltaTime); 
+    private Vector3 CombineVelocity() {
+        Vector3 moveVector = new Vector3(_velocity.x, _velocity.y, _velocity.z + _forwardVelocity);
+        return moveVector;
+    }
+
+    private void HandleAcceleration() {
+        if (_playerState == PlayerStates.Jumping) return;
+        if (_playerState == PlayerStates.Sliding) return;
+        if (_playerState == PlayerStates.Crouching) return;
+        if (!_isGrounded) return;
+        _forwardVelocity += (AccelerationCurve() * _inputDirection.z * Time.deltaTime); 
+        ForwardVelocityClamp();
+
     }
 
     private void HandleDeceleration() {
-        if (_velocity.z > _basicMovementSpeed) {
-            _velocity.z = Mathf.MoveTowards(_velocity.z, 0f, ForwardDeceleration() * Time.deltaTime);
+        if (_playerState == PlayerStates.Jumping) return;
+        if (!_isGrounded) return;
+        if (_forwardVelocity > 0f) {
+            _forwardVelocity = Mathf.MoveTowards(_forwardVelocity, 0f, ForwardDeceleration() * Time.deltaTime);
         }
     }
 
     private float ForwardDeceleration() {
         if (_inputDirection.z > 0) return 0f;
-        else if (_inputDirection.z < 0) {
-            _isCameraLock = true;
-            return _stopDeceleration;  
-        }  
+        else if (_playerState == PlayerStates.Sliding) return _slidingDeceleration; 
         else {
             _isCameraLock = true;
             return _stopDeceleration; 
@@ -113,11 +116,11 @@ public class MovementController : MonoBehaviour
     }
 
     private void ForwardVelocityClamp() {
-        _velocity.z = Mathf.Clamp(_velocity.z, -_basicMovementSpeed, _forwardVelocityHardCap);
+        _forwardVelocity = Mathf.Clamp(_forwardVelocity, 0f, _forwardVelocityHardCap);
     }
     
     private float AccelerationCurve() {
-        float time = _velocity.z / _forwardVelocitySoftCap;
+        float time = _forwardVelocity / _forwardVelocitySoftCap;
         return _accelarationCurve.Evaluate(time) * _acceleration;
     }
 
@@ -135,6 +138,8 @@ public class MovementController : MonoBehaviour
     }
 
     private void HandleRotation() {
+        if (_playerState == PlayerStates.Jumping) return;
+        if (_playerState == PlayerStates.Sliding) return;
         if (_isCameraLock) return;
         if (_inputDirection != Vector3.zero) transform.forward = _cameraForward;
     }
@@ -146,15 +151,48 @@ public class MovementController : MonoBehaviour
 
     private void HandleStandingRotation() {
         if (_isCameraLock) return;
+        if (_playerState == PlayerStates.Jumping) return;
+        if (_playerState == PlayerStates.Sliding) return;
+        if (!_isGrounded) return;
         float angle = Vector3.Angle(_cameraForward, transform.forward);
         if (angle >= _cameraAngleStandingRotation) transform.forward = Vector3.MoveTowards(transform.forward, _cameraForward, _cameraSpeedStandingRotation * Time.deltaTime);
         //Debug.Log(angle);
     }
 
     private void HandleSharpTurn() {
+        if (_playerState == PlayerStates.Jumping) return;
+        if (_playerState == PlayerStates.Sliding) return;
+        if (!_isGrounded) return;
         float angle = Vector3.Angle(_cameraForward, _cameraForwardLastFrame);     
-        if (angle >= _cameraAngleSharpTurn) _velocity.z = 0f;  
+        if (angle >= _cameraAngleSharpTurn) _forwardVelocity = 0f;  
         //Debug.Log(angle);
+    }
+
+    public void HandleJump() {
+        if (!_isGrounded) return;
+        _velocity.y = Mathf.Sqrt(_jumpHeight * -3f * _gravity);
+
+        // While in air, disable deceleration OR apply very small amount of deceleration.
+        // Also lock the ForwardVelocity acceleration. Only ifluence movement with Basic Movement, with lower values compared to the Grounded state.
+        // Also pause the HandleSharpTurn while in air. Only after landing continue calculations. (So if you continue to look at your look direction, you keep your momentum but
+        // if you look at a different direction it will go down to zero.)
+    }
+
+    private void LastCameraForward() {
+        if (_playerState == PlayerStates.Jumping) return;
+        if (_playerState == PlayerStates.Sliding) return;
+        if (!_isGrounded) return;
+        _cameraForwardLastFrame = _cameraForward;
+    }
+
+    public void HandleCrouch() {
+        if (!_isGrounded) return;
+        if (_forwardVelocity > 0) {
+            _playerState = PlayerStates.Sliding;
+        }
+        else {
+            _playerState = PlayerStates.Crouching;
+        }
     }
 
     private void Update() {
@@ -167,30 +205,39 @@ public class MovementController : MonoBehaviour
         _isCameraLock = false;
         _moveDirection = _velocity.normalized;
 
-        if (!_isGrounded) _velocity.y += _gravity;
-        else if (_isGrounded) _velocity.y = 0f;
+        if (!_isGrounded){
+            _velocity.y += _gravity * Time.deltaTime;
+            _playerState = PlayerStates.Jumping;
+        } 
+        else if (_isGrounded) {
+            _velocity.y = 0f;
+            _playerState = PlayerStates.Walking;
+        }
 
         HandleBasicMovement();
+        HandleAcceleration();
         HandleDeceleration();
         HandleSharpTurn();
-
+       
         Vector3 finalVector;
-        if (_movementState == MovementStates.Decelerating) {
-            finalVector = _velocity.x * transform.right + _velocity.z * transform.forward + Vector3.up * _velocity.y;
+        if (_movementState == MovementStates.Decelerating || _playerState == PlayerStates.Jumping) {
+            finalVector = CombineVelocity().x * transform.right + CombineVelocity().z * transform.forward + Vector3.up * CombineVelocity().y;
         }
         else {
-            finalVector = _velocity.x * _cameraRight + _velocity.z * _cameraForward + Vector3.up * _velocity.y;
+            finalVector = CombineVelocity().x * _cameraRight + CombineVelocity().z * _cameraForward + Vector3.up * CombineVelocity().y;
         }
         HandleMovement(finalVector);
 
-        _cameraForwardLastFrame = _cameraForward;
+        LastCameraForward();
         HandleMovementStates();
         //HandlePlayerStates();
+
+        //_playerState = PlayerStates.Idle;
     }
 
     public void SetInputValues(Vector2 inputValues) {_inputDirection = new Vector3(inputValues.x, 0, inputValues.y);}
 
-    public float GetForwardVelocity() {return _velocity.z;}
+    public float GetForwardVelocity() {return CombineVelocity().z;}
 
     public void SetCameraTransform(Transform camera) {_camera = camera;}
 

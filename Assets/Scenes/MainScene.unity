@@ -969,6 +969,14 @@ PrefabInstance:
   m_Modification:
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 252580913, guid: 3fa947e53116ff2449ec208a54788268, type: 3}
+      propertyPath: _jumpHeight
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 252580913, guid: 3fa947e53116ff2449ec208a54788268, type: 3}
+      propertyPath: _slidingDeceleration
+      value: 10
+      objectReference: {fileID: 0}
     - target: {fileID: 1409395590693348476, guid: 3fa947e53116ff2449ec208a54788268,
         type: 3}
       propertyPath: m_RootOrder

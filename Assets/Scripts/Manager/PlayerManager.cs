@@ -36,12 +36,14 @@ public class PlayerManager : MonoBehaviour
         EventManager.Instance.OnMovePerformed += OnMove;
         EventManager.Instance.OnJumpPressed += OnJump;
         EventManager.Instance.OnMousePerformed += OnAim;
+        EventManager.Instance.OnCrouchHeld += OnCrouch;
     }
 
     private void UnassignEvents() {
         EventManager.Instance.OnMovePerformed -= OnMove;
         EventManager.Instance.OnJumpPressed -= OnJump;
         EventManager.Instance.OnMousePerformed -= OnAim;
+         EventManager.Instance.OnCrouchHeld -= OnCrouch;
     }
 
     private void OnMove(Vector2 inputAxis) {
@@ -50,7 +52,7 @@ public class PlayerManager : MonoBehaviour
     }
 
     private void OnJump() {
-
+        _movementController.HandleJump();
     }
 
     private void OnAim(Vector2 inputAxis) {
@@ -58,5 +60,9 @@ public class PlayerManager : MonoBehaviour
 
         // No need to set this every frame. Maybe, instead of sending the Transform, directly send the forward and right.
         _movementController.SetCameraTransform(_cameraController.GetCameraTransform());
+    }
+
+    private void OnCrouch() {
+        _movementController.HandleCrouch();
     }
 }
