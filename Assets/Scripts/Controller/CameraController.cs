@@ -4,13 +4,21 @@ using UnityEngine;
 
 public class CameraController : MonoBehaviour
 {
+    #region Serialized Variables
+
     [SerializeField] private Camera _camera;
     [SerializeField] private float _sensitivity;
-
     [SerializeField] private Transform _followTarget;
-
     [SerializeField] private float _cameraVerticalMinClamp, _cameraVerticalMaxClamp;
+    
+    #endregion
+
+    #region Private Variables
+
     private Vector2 _inputAxis;
+    private Vector2 _cameraRotation = Vector2.zero;
+
+    #endregion  
  
     private void Awake() {
         _camera = GetComponent<Camera>();
@@ -18,13 +26,13 @@ public class CameraController : MonoBehaviour
     }
 
     private void HandleCameraRotation() {
-        float cameraVerticalRotation = -_inputAxis.y * _sensitivity * Time.deltaTime;
-        float cameraHorizontalRotation = _inputAxis.x * _sensitivity * Time.deltaTime;
-        cameraVerticalRotation = Mathf.Clamp(cameraVerticalRotation, _cameraVerticalMinClamp, _cameraVerticalMaxClamp);
+        _cameraRotation.y += _inputAxis.y * _sensitivity * Time.deltaTime;
+        _cameraRotation.x += _inputAxis.x * _sensitivity * Time.deltaTime;
+        _cameraRotation.y = Mathf.Clamp(_cameraRotation.y, _cameraVerticalMinClamp, _cameraVerticalMaxClamp);
         
-        //_camera.transform.rotation = Quaternion.Euler(cameraVerticalRotation, 0f, 0f);
-        _camera.transform.Rotate(Vector3.up * cameraHorizontalRotation);
-
+        Quaternion xQuat = Quaternion.AngleAxis(_cameraRotation.x, Vector3.up);
+        Quaternion yQuat = Quaternion.AngleAxis(_cameraRotation.y, Vector3.left);
+        _camera.transform.rotation = xQuat * yQuat;
     }
 
     private void HandleCameraMovement() {
@@ -40,4 +48,10 @@ public class CameraController : MonoBehaviour
     }
 
     public void SetInputAxis(Vector2 inputAxis) {_inputAxis = inputAxis;}
+
+    public Transform GetCameraTransform() {return _camera.transform;}
+
+    //_camera.transform.rotation = Quaternion.Euler(cameraVerticalRotation, 0f, 0f);
+    // _camera.transform.Rotate(Vector3.up * cameraHorizontalRotation);
+    // _camera.transform.rotation = Quaternion.Euler(cameraVerticalRotation, 0f, 0f);
 }

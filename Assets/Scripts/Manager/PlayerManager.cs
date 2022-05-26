@@ -55,5 +55,8 @@ public class PlayerManager : MonoBehaviour
 
     private void OnAim(Vector2 inputAxis) {
         _cameraController.SetInputAxis(inputAxis);
+
+        // No need to set this every frame. Maybe, instead of sending the Transform, directly send the forward and right.
+        _movementController.SetCameraTransform(_cameraController.GetCameraTransform());
     }
 }

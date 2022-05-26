@@ -5,30 +5,36 @@ using UnityEngine;
 [RequireComponent(typeof(CharacterController))]
 public class MovementController : MonoBehaviour
 {
-    [Header("Properties")] 
+    #region Serialized Variables
 
+    [Header("Movement")]
     [SerializeField] private float _acceleration;
     [SerializeField] private AnimationCurve _accelarationCurve;
-    //[SerializeField] private float _passiveDeceleration;
     [SerializeField] private float _stopDeceleration;
     [SerializeField] private float _basicMovementSpeed;
     [SerializeField] private float _forwardVelocityHardCap;
     [SerializeField] private float _forwardVelocitySoftCap;
+    [Space]
+    [Header("Camera")]
     [SerializeField] private float _cameraAngleStandingRotation;
     [SerializeField] private float _cameraSpeedStandingRotation;
     [SerializeField] private float _cameraAngleSharpTurn;
-
     [Space]
-
+    [Space]
     [Header("References")]
     [SerializeField] private CharacterController _characterController;
-    [SerializeField] private Camera _mainCamera;
-
+    [SerializeField] private Transform _camera;
     [Space]
-
+    [Space]
     [Header("Control Values")]
     [SerializeField] private Vector3 _velocity;
     [SerializeField] private bool _isGrounded;
+    [SerializeField] private MovementStates _movementState;
+    [SerializeField] private PlayerStates _playerState;
+
+    #endregion  
+
+    #region Private Variables
 
     private float _gravity; 
     private Vector3 _inputDirection;
@@ -36,10 +42,19 @@ public class MovementController : MonoBehaviour
     private bool _wasMovingLastFrame;
     private bool _isCameraLock;
     private float _forwardVelocity;
-
     private Vector3 _cameraForwardLastFrame;
+    private Vector3 _cameraRight {
+        get {
+            return _camera.right;
+        }
+    }
+    private Vector3 _cameraForward {
+        get { 
+            return Vector3.ProjectOnPlane(_camera.forward, Vector3.up).normalized;
+        }
+    }
 
-    [SerializeField] private MovementStates _movementState;
+    #endregion
 
     private void HandleMovementStates() {
         if (_velocity.z == 0f) {
@@ -54,6 +69,10 @@ public class MovementController : MonoBehaviour
         else if (_velocity.z >= _basicMovementSpeed && _inputDirection.z <= 0) {
             _movementState = MovementStates.Decelerating;
         }
+    }
+
+    private void HandlePlayerStates() {
+
     }
 
     private float _inputDirectionZ() {
@@ -96,13 +115,6 @@ public class MovementController : MonoBehaviour
     private void ForwardVelocityClamp() {
         _velocity.z = Mathf.Clamp(_velocity.z, -_basicMovementSpeed, _forwardVelocityHardCap);
     }
-
-    private float Acceleration() {
-        if (_velocity.z >= _forwardVelocitySoftCap) return 0f;
-        else {
-            return _acceleration;
-        } 
-    }
     
     private float AccelerationCurve() {
         float time = _velocity.z / _forwardVelocitySoftCap;
@@ -111,7 +123,6 @@ public class MovementController : MonoBehaviour
 
     private void Awake() {
         _characterController = GetComponent<CharacterController>();
-        _mainCamera = Camera.main;
         _gravity = Physics.gravity.y;
     }
 
@@ -123,9 +134,9 @@ public class MovementController : MonoBehaviour
         _characterController.Move(value * Time.deltaTime);
     }
 
-    private void Rotate() {
+    private void HandleRotation() {
         if (_isCameraLock) return;
-        if (_inputDirection != Vector3.zero) transform.forward = Camera.main.transform.forward;
+        if (_inputDirection != Vector3.zero) transform.forward = _cameraForward;
     }
 
     private void MovingLastFrameCheck() {
@@ -135,13 +146,13 @@ public class MovementController : MonoBehaviour
 
     private void HandleStandingRotation() {
         if (_isCameraLock) return;
-        float angle = Vector3.Angle(_mainCamera.gameObject.transform.forward, transform.forward);
-        if (angle >= _cameraAngleStandingRotation) transform.forward = Vector3.MoveTowards(transform.forward, Camera.main.transform.forward, _cameraSpeedStandingRotation * Time.deltaTime);
+        float angle = Vector3.Angle(_cameraForward, transform.forward);
+        if (angle >= _cameraAngleStandingRotation) transform.forward = Vector3.MoveTowards(transform.forward, _cameraForward, _cameraSpeedStandingRotation * Time.deltaTime);
         //Debug.Log(angle);
     }
 
     private void HandleSharpTurn() {
-        float angle = Vector3.Angle(_mainCamera.gameObject.transform.forward, _cameraForwardLastFrame);     
+        float angle = Vector3.Angle(_cameraForward, _cameraForwardLastFrame);     
         if (angle >= _cameraAngleSharpTurn) _velocity.z = 0f;  
         //Debug.Log(angle);
     }
@@ -149,12 +160,11 @@ public class MovementController : MonoBehaviour
     private void Update() {
         MovingLastFrameCheck();
         GroundCheck();
-        Rotate();
 
+        HandleRotation();
         HandleStandingRotation();
-
+ 
         _isCameraLock = false;
-
         _moveDirection = _velocity.normalized;
 
         if (!_isGrounded) _velocity.y += _gravity;
@@ -162,7 +172,6 @@ public class MovementController : MonoBehaviour
 
         HandleBasicMovement();
         HandleDeceleration();
-
         HandleSharpTurn();
 
         Vector3 finalVector;
@@ -170,18 +179,27 @@ public class MovementController : MonoBehaviour
             finalVector = _velocity.x * transform.right + _velocity.z * transform.forward + Vector3.up * _velocity.y;
         }
         else {
-            finalVector = _velocity.x * _mainCamera.transform.right + _velocity.z * _mainCamera.transform.forward + Vector3.up * _velocity.y;
+            finalVector = _velocity.x * _cameraRight + _velocity.z * _cameraForward + Vector3.up * _velocity.y;
         }
-
-
         HandleMovement(finalVector);
 
-        _cameraForwardLastFrame = _mainCamera.gameObject.transform.forward;
-
+        _cameraForwardLastFrame = _cameraForward;
         HandleMovementStates();
+        //HandlePlayerStates();
     }
 
     public void SetInputValues(Vector2 inputValues) {_inputDirection = new Vector3(inputValues.x, 0, inputValues.y);}
 
     public float GetForwardVelocity() {return _velocity.z;}
+
+    public void SetCameraTransform(Transform camera) {_camera = camera;}
+
+    //[SerializeField] private float _passiveDeceleration;
+
+    // private float Acceleration() {
+    //     if (_velocity.z >= _forwardVelocitySoftCap) return 0f;
+    //     else {
+    //         return _acceleration;
+    //     } 
+    // }
 }
