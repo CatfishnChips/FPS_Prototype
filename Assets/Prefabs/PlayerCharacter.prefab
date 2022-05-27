@@ -52,7 +52,7 @@ CharacterController:
   m_SlopeLimit: 45
   m_StepOffset: 0.3
   m_SkinWidth: 0.08
-  m_MinMoveDistance: 0.001
+  m_MinMoveDistance: 0
   m_Center: {x: 0, y: 0, z: 0}
 --- !u!114 &252580913
 MonoBehaviour:
@@ -100,10 +100,12 @@ MonoBehaviour:
   _forwardVelocityHardCap: 50
   _forwardVelocitySoftCap: 25
   _jumpHeight: 2
-  _groundCheckDistance: 0.1
-  _groundLayer:
+  _slopeCheckDistance: 0
+  _slopeLayer:
     serializedVersion: 2
-    m_Bits: 2147483647
+    m_Bits: 0
+  _gravityMultiplier: 1
+  _maxGravity: -10
   _cameraAngleStandingRotation: 45
   _cameraSpeedStandingRotation: 5
   _cameraAngleSharpTurn: 15

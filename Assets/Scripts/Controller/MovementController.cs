@@ -19,8 +19,15 @@ public class MovementController : MonoBehaviour
     [SerializeField] private float _forwardVelocityHardCap;
     [SerializeField] private float _forwardVelocitySoftCap;
     [SerializeField] private float _jumpHeight;
+    [SerializeField] private float _gravityMultiplier;
+    [SerializeField] private float _maxGravity;
+    [Space]
+    [Header("Raycast")]
+    [SerializeField] private float _slopeCheckDistance;
     [SerializeField] private float _groundCheckDistance;
-    [SerializeField] private LayerMask _groundLayer;
+    [SerializeField] private LayerMask _slopeLayer, _groundLayer;
+    [SerializeField] private bool _isFacingObject;
+    [SerializeField] private float _slopeAngle;
     [Space]
     [Header("Camera")]
     [SerializeField] private float _cameraAngleStandingRotation;
@@ -74,6 +81,7 @@ public class MovementController : MonoBehaviour
             else if (_playerState == PlayerStates.Crouching) return 0f;
             else if (_playerState == PlayerStates.Jumping) return 0f;
             else if (!_isGrounded) return 0f;
+            else if (!_canAccelerate) return 0f;
             else return _baseAcceleration;
         }
     }
@@ -87,6 +95,21 @@ public class MovementController : MonoBehaviour
                 _playerState = PlayerStates.Stopping;
                 return _stopDeceleration;
             } 
+        }
+    }
+    private bool _canAccelerate {
+        get {
+            if (_playerState == PlayerStates.Sliding) return false;
+            else if (_playerState == PlayerStates.Crouching) return false;
+            else if (_playerState == PlayerStates.Jumping) return false;
+            else if (!_isGrounded) return false;
+            else if (_isFacingObject) return false;
+            else return true;
+        }
+    }
+    private Vector3 _characterControllerFeet {
+        get {
+            return transform.position + new Vector3(0f, -_characterController.height / 2, 0f);
         }
     }
 
@@ -158,13 +181,30 @@ public class MovementController : MonoBehaviour
         _gravity = Physics.gravity.y;
     }
 
+    private void SlopeCheck() {
+        Physics.Raycast(_characterControllerFeet, Vector3.down, out RaycastHit hitInfoGround, _groundCheckDistance, _groundLayer);
+        Physics.Raycast(_characterControllerFeet, Vector3.down, out RaycastHit hitInfoSlope, _slopeCheckDistance, _slopeLayer);
+        Debug.Log("Slope " + hitInfoSlope.collider + " " + "Ground " + hitInfoGround.collider);
+        if (hitInfoSlope.transform != null) _isFacingObject = true;
+        else _isFacingObject = false;
+        _slopeAngle = Vector3.Angle(transform.up, hitInfoGround.normal);
+        if (_slopeAngle >= _characterController.slopeLimit) HandleSlopeSlide();
+    }
+
+    private void HandleSlopeSlide() {
+
+    }
+
     private void GroundCheck() {
-        if (Physics.Raycast(transform.position + new Vector3(0f, -_characterController.height/2, 0f), Vector3.down, _groundCheckDistance, _groundLayer)) {
-            _isGrounded = true;
+        // if (Physics.Raycast(_characterControllerFeet, Vector3.down, _groundCheckDistance, _groundLayer)) {
+        //     _isGrounded = true;
+        //     if (_playerState == PlayerStates.Jumping) _playerState = PlayerStates.Idle;
+        // }
+        // else _isGrounded = false;
+        _isGrounded = _characterController.isGrounded;
+        if (_isGrounded) {
             if (_playerState == PlayerStates.Jumping) _playerState = PlayerStates.Idle;
         }
-        else _isGrounded = false;
-        //_isGrounded = _characterController.isGrounded;
     }
 
     private void HandleMovement(Vector3 value) {
@@ -231,19 +271,21 @@ public class MovementController : MonoBehaviour
     }
 
     private void FixedUpdate() {
-        GroundCheck();
-
-        if (!_isGrounded){
-            _velocity.y += _gravity * Time.deltaTime;
-        } 
-        else if (_isGrounded) {
-            _velocity.y = -2f;
-        }
+        SlopeCheck();
     }
 
     private void Update() {
         MovingLastFrameCheck();
-        //GroundCheck();
+
+        GroundCheck();
+
+        if (!_isGrounded){
+            _velocity.y += _gravity * _gravityMultiplier * Time.deltaTime;
+        } 
+        else if (_isGrounded) {
+            _velocity.y += _gravity * _gravityMultiplier * Time.deltaTime;
+        }
+        _velocity.y = Mathf.Clamp(_velocity.y, _maxGravity, 100f);
 
         HandleRotation();
         HandleStandingRotation();
@@ -274,7 +316,8 @@ public class MovementController : MonoBehaviour
     }
 
     private void OnDrawGizmos() {
-        Gizmos.DrawLine(transform.position + new Vector3(0f, -_characterController.height/2, 0f), Vector3.down * _groundCheckDistance + transform.position);
+        Gizmos.DrawLine(_characterControllerFeet, Vector3.down * _groundCheckDistance + _characterControllerFeet);
+        Gizmos.DrawLine(_characterControllerFeet, transform.forward * _slopeCheckDistance + _characterControllerFeet);
     }
 
     public void ChangePlayerState(PlayerStates state) { _playerState = state;}
