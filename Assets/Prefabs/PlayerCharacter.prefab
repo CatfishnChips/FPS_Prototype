@@ -66,7 +66,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0093083804ee5504289bbaaaa8cb611e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _acceleration: 10
+  _baseAcceleration: 10
   _accelarationCurve:
     serializedVersion: 2
     m_Curve:
@@ -91,18 +91,28 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
+  _runningTreshold: 10
   _stopDeceleration: 50
+  _slidingDeceleration: 10
   _basicMovementSpeed: 10
+  _crouchingMovementSpeed: 5
+  _airborneMovementSpeed: 5
   _forwardVelocityHardCap: 50
   _forwardVelocitySoftCap: 25
+  _jumpHeight: 2
+  _groundCheckDistance: 0.1
+  _groundLayer:
+    serializedVersion: 2
+    m_Bits: 2147483647
   _cameraAngleStandingRotation: 45
   _cameraSpeedStandingRotation: 5
   _cameraAngleSharpTurn: 15
   _characterController: {fileID: 252580912}
-  _mainCamera: {fileID: 0}
+  _camera: {fileID: 0}
   _velocity: {x: 0, y: 0, z: 0}
   _isGrounded: 0
   _movementState: 0
+  _playerState: 0
 --- !u!114 &252580914
 MonoBehaviour:
   m_ObjectHideFlags: 0

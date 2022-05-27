@@ -30,6 +30,7 @@ public class EventManager : MonoBehaviour
     public UnityAction<Vector2> OnMousePerformed;
 
     public UnityAction OnCrouchHeld;
+    public UnityAction OnCrouchUp;
 
     #endregion
 }

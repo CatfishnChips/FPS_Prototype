@@ -1,11 +1,12 @@
 using System;
 
 [Serializable]
-enum PlayerStates {
+public enum PlayerStates {
     Idle,
     Walking,
     Running,
     Jumping,
     Crouching,
-    Sliding
+    Sliding,
+    Stopping
 }

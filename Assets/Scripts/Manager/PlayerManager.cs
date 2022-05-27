@@ -34,16 +34,20 @@ public class PlayerManager : MonoBehaviour
 
     private void AssignEvents() {
         EventManager.Instance.OnMovePerformed += OnMove;
-        EventManager.Instance.OnJumpPressed += OnJump;
+        EventManager.Instance.OnJumpPressed += OnJumpDown;
         EventManager.Instance.OnMousePerformed += OnAim;
+
         EventManager.Instance.OnCrouchHeld += OnCrouch;
+        EventManager.Instance.OnCrouchUp += OnCrouchUp;
     }
 
     private void UnassignEvents() {
         EventManager.Instance.OnMovePerformed -= OnMove;
-        EventManager.Instance.OnJumpPressed -= OnJump;
+        EventManager.Instance.OnJumpPressed -= OnJumpDown;
         EventManager.Instance.OnMousePerformed -= OnAim;
-         EventManager.Instance.OnCrouchHeld -= OnCrouch;
+
+        EventManager.Instance.OnCrouchHeld -= OnCrouch;
+        EventManager.Instance.OnCrouchUp -= OnCrouchUp;
     }
 
     private void OnMove(Vector2 inputAxis) {
@@ -51,7 +55,10 @@ public class PlayerManager : MonoBehaviour
         UIManager.Instance.SetVelocityInfo(_movementController.GetForwardVelocity());
     }
 
-    private void OnJump() {
+    private void OnJumpDown() {
+        // For the PlayerState to be Jumping, we need to be sure jump is actually performed.
+        //_movementController.ChangePlayerState(PlayerStates.Jumping);
+        
         _movementController.HandleJump();
     }
 
@@ -63,6 +70,13 @@ public class PlayerManager : MonoBehaviour
     }
 
     private void OnCrouch() {
+        // HandleCrouch decides between Crouching and Sliding states.
+        //_movementController.ChangePlayerState(PlayerStates.Crouching);
+
         _movementController.HandleCrouch();
+    }
+
+    private void OnCrouchUp() {
+        _movementController.ChangePlayerState(PlayerStates.Idle);
     }
 }

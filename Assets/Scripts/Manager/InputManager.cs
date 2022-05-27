@@ -29,6 +29,7 @@ public class InputManager : MonoBehaviour
         if (Input.GetButtonDown("Jump")) EventManager.Instance.OnJumpPressed?.Invoke();
 
         if (Input.GetKey(KeyCode.LeftControl)) EventManager.Instance.OnCrouchHeld?.Invoke();
+        if (Input.GetKeyUp(KeyCode.LeftControl)) EventManager.Instance.OnCrouchUp?.Invoke();
     }
     
 }
