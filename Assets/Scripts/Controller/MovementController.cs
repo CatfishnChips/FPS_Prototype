@@ -10,7 +10,6 @@ public class MovementController : MonoBehaviour
     [Header("Movement")]
     [SerializeField] private float _baseAcceleration;
     [SerializeField] private AnimationCurve _accelarationCurve;
-    [SerializeField] private float _runningTreshold;
     [SerializeField] private float _stopDeceleration;
     [SerializeField] private float _slidingDeceleration;
     [SerializeField] private float _basicMovementSpeed;
@@ -82,6 +81,7 @@ public class MovementController : MonoBehaviour
             else if (_playerState == PlayerStates.Jumping) return 0f;
             else if (!_isGrounded) return 0f;
             else if (!_canAccelerate) return 0f;
+            else if (_velocity.z >= _forwardVelocitySoftCap) return 0f;
             else return _baseAcceleration;
         }
     }
@@ -115,23 +115,6 @@ public class MovementController : MonoBehaviour
 
     #endregion
 
-    // private void HandlePlayerStates() {
-    //     switch (_playerState) {
-    //         case PlayerStates.Idle:
-    //         break;
-    //         case PlayerStates.Walking:
-    //         break;
-    //         case PlayerStates.Running:
-    //         break;
-    //         case PlayerStates.Crouching:
-    //         break;
-    //         case PlayerStates.Sliding:
-    //         break;
-    //         case PlayerStates.Jumping:
-    //         break;
-    //     }
-    // }
-
     private void HandleBasicMovement() {
         _velocity.x = _inputDirection.x * _movementSpeed;
         _velocity.z = _inputDirectionZ();
@@ -155,7 +138,7 @@ public class MovementController : MonoBehaviour
     }
 
     private float _inputDirectionZ() {
-        if (_velocity.z >= _runningTreshold) { 
+        if (_velocity.z >= _basicMovementSpeed) { 
             //Debug.Log("Accelerating");
             if (_playerState != PlayerStates.Crouching && _playerState != PlayerStates.Jumping && _playerState != PlayerStates.Sliding) _playerState = PlayerStates.Running;
             return HandleAcceleration(); }  
@@ -171,7 +154,7 @@ public class MovementController : MonoBehaviour
     }
     
     private float AccelerationCurve() {
-        float time = Mathf.Abs(_velocity.z - _baseAcceleration) / _forwardVelocitySoftCap;
+        float time = Mathf.Abs(_velocity.z - _baseAcceleration) / (_forwardVelocitySoftCap - _baseAcceleration);
         Debug.Log(time);
         return _accelarationCurve.Evaluate(time) * _acceleration;
     }
@@ -184,7 +167,7 @@ public class MovementController : MonoBehaviour
     private void SlopeCheck() {
         Physics.Raycast(_characterControllerFeet, Vector3.down, out RaycastHit hitInfoGround, _groundCheckDistance, _groundLayer);
         Physics.Raycast(_characterControllerFeet, Vector3.down, out RaycastHit hitInfoSlope, _slopeCheckDistance, _slopeLayer);
-        Debug.Log("Slope " + hitInfoSlope.collider + " " + "Ground " + hitInfoGround.collider);
+        //Debug.Log("Slope " + hitInfoSlope.collider + " " + "Ground " + hitInfoGround.collider);
         if (hitInfoSlope.transform != null) _isFacingObject = true;
         else _isFacingObject = false;
         _slopeAngle = Vector3.Angle(transform.up, hitInfoGround.normal);
@@ -262,7 +245,7 @@ public class MovementController : MonoBehaviour
 
     public void HandleCrouch() {
         if (!_isGrounded) return;
-        if (_velocity.z > _runningTreshold) {
+        if (_velocity.z > _basicMovementSpeed) {
             _playerState = PlayerStates.Sliding;
         }
         else {
@@ -272,9 +255,6 @@ public class MovementController : MonoBehaviour
 
     private void FixedUpdate() {
         SlopeCheck();
-    }
-
-    private void Update() {
         MovingLastFrameCheck();
 
         GroundCheck();
@@ -309,6 +289,10 @@ public class MovementController : MonoBehaviour
         HandleMovement(finalVector);
 
         LastCameraForward();
+    }
+
+    private void Update() {
+        
         //HandleMovementStates();
         //HandlePlayerStates();
 
@@ -329,6 +313,7 @@ public class MovementController : MonoBehaviour
     public void SetCameraTransform(Transform camera) {_camera = camera;}
 
     //[SerializeField] private float _passiveDeceleration;
+    //[SerializeField] private float _runningTreshold;
 
     // private float Acceleration() {
     //     if (_velocity.z >= _forwardVelocitySoftCap) return 0f;
@@ -378,5 +363,22 @@ public class MovementController : MonoBehaviour
     //         _playerState = PlayerStates.Stopping;
     //         return _stopDeceleration; 
     //     } 
+    // }
+
+        // private void HandlePlayerStates() {
+    //     switch (_playerState) {
+    //         case PlayerStates.Idle:
+    //         break;
+    //         case PlayerStates.Walking:
+    //         break;
+    //         case PlayerStates.Running:
+    //         break;
+    //         case PlayerStates.Crouching:
+    //         break;
+    //         case PlayerStates.Sliding:
+    //         break;
+    //         case PlayerStates.Jumping:
+    //         break;
+    //     }
     // }
 }
